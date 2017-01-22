@@ -3,18 +3,19 @@ import java.awt.event.*;
 import java.util.Arrays;
 
 class Tetris extends Canvas{
+  BrickPoint bricks[][][] = new BrickPoint[7][4][16];
+  int borderRight = playGroundX - cubeSize;
+  int borderBottom = playGroundY - cubeSize;
   static int cubeSize = 40;
   static int winX = 620;
   static int winY = 700;
   static int playGroundX = 400;
   static int playGroundY = 640;
   static int playGroundOffset = 15;
-  public static Point currentPosition = new Point(0, 0);
+  public static Point currentBrickPosition = new Point(0, 0);
+  public static BrickState currentBrickState = new BrickState(1, 0);
   public static Tetris tetris = new Tetris();
   public static Operation operation = new Operation(cubeSize);
-  int borderRight = playGroundX - cubeSize;
-  int borderBottom = playGroundY - cubeSize;
-  BrickPoint bricks[][][] = new BrickPoint[7][4][16];
 
   public static void main(String args[]){
     // Create frame and add some event listener
@@ -76,7 +77,7 @@ class Tetris extends Canvas{
 
       // Brick S
       {
-        {5, 6, 8, 9}, {0, 4, 5, 9}, {5, 6, 8, 9}, {0, 4, 5, 9}
+        {1, 2, 4, 5}, {0, 4, 5, 9}, {1, 2, 4, 5}, {0, 4, 5, 9}
       },
 
       // Brick T
@@ -110,12 +111,14 @@ class Tetris extends Canvas{
 
   public void test(Graphics g){
     // Render cube
-    BrickPoint temp[] = bricks[0][1];
+    int brick = Tetris.currentBrickState.getBrick();
+    int rotate = Tetris.currentBrickState.getRotate();
+    BrickPoint temp[] = bricks[brick][rotate];
 
     for(int i = 0 ; i < bricks[0][0].length ; i++){
       if(temp[i].isRender){
         g.setColor(Color.blue);
-        g.fillRect((int)temp[i].getX() + playGroundOffset + 1 + (int)currentPosition.getX(), (int)temp[i].getY() + playGroundOffset + 1 + (int)currentPosition.getY(), cubeSize - 1, cubeSize - 1);
+        g.fillRect((int)temp[i].getX() + playGroundOffset + 1 + (int)currentBrickPosition.getX(), (int)temp[i].getY() + playGroundOffset + 1 + (int)currentBrickPosition.getY(), cubeSize - 1, cubeSize - 1);
       }
     }
   }
@@ -187,18 +190,40 @@ class Operation extends KeyAdapter{
   }
 
   public void rotate(){
-    // to-do
+    Tetris.currentBrickState.nextRotate();
   }
 
   public void moveDown(){
-    Tetris.currentPosition.move((int)Tetris.currentPosition.getX(), (int)Tetris.currentPosition.getY() + this.offset);
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + this.offset);
   }
 
   public void moveLeft(){
-    Tetris.currentPosition.move((int)Tetris.currentPosition.getX() - this.offset, (int)Tetris.currentPosition.getY());
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() - this.offset, (int)Tetris.currentBrickPosition.getY());
   }
 
   public void moveRight(){
-    Tetris.currentPosition.move((int)Tetris.currentPosition.getX() + this.offset, (int)Tetris.currentPosition.getY());
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.offset, (int)Tetris.currentBrickPosition.getY());
+  }
+}
+
+class BrickState extends Point{
+  public BrickState(int brickNum, int rotateNum){
+    super(brickNum, rotateNum);
+  }
+
+  public int getBrick(){
+    return (int)this.getX();
+  }
+
+  public int getRotate(){
+    return (int)this.getY();
+  }
+
+  public void nextBrick(){
+    this.move((this.getBrick() + 1) % 7, this.getRotate());
+  }
+
+  public void nextRotate(){
+    this.move(this.getBrick(), (this.getRotate() + 1) % 4);
   }
 }

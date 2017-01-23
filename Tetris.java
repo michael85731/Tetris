@@ -1,6 +1,6 @@
 import java.awt.*;
 import java.awt.event.*;
-import java.util.Arrays;
+import java.util.*;
 
 class Tetris extends Canvas{
   int borderRight = playGroundWidth - cubeSize;
@@ -9,6 +9,7 @@ class Tetris extends Canvas{
   static int winX = 620;
   static int winY = 700;
   static int playGroundOffset = 15;
+  public ArrayList<Point> fillBricks = new ArrayList<Point>();
   public static int playGroundWidth = 400;
   public static int playGroundHeight = 640;
   public static Point currentBrickPosition = new Point(0, 0);
@@ -16,6 +17,7 @@ class Tetris extends Canvas{
   public static Tetris tetris = new Tetris();
   public static Operation operation = new Operation(cubeSize);
   public static BrickPoint bricks[][][] = new BrickPoint[7][4][16];
+  static int lineCubeNum = playGroundWidth / cubeSize;
 
   public static void main(String args[]){
     // Create frame and add some event listener
@@ -36,6 +38,7 @@ class Tetris extends Canvas{
   public void paint(Graphics g){
     drawPlayGround(g);
     renderCurrentBrick(g);
+    renderFillBricks(g);
   }
 
   public void drawPlayGround(Graphics g){
@@ -122,6 +125,13 @@ class Tetris extends Canvas{
     }
   }
 
+  public void renderFillBricks(Graphics g){
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+        g.setColor(Color.red);
+        g.fillRect((int)fillBricks.get(i).getX() + 1, (int)fillBricks.get(i).getY() + 1, cubeSize - 1, cubeSize - 1);
+      }
+  }
+
   public void modifyBrickPoint(BrickPoint brick[], int openPoint[]){
     for(int i = 0 ; i < brick.length ; i++){
       for(int j = 0 ; j < openPoint.length ; j++){
@@ -133,6 +143,37 @@ class Tetris extends Canvas{
         }
       }
     }
+  }
+
+  public void updateFillBricks(){
+    int brick = Tetris.currentBrickState.getBrick();
+    int rotate = Tetris.currentBrickState.getRotate();
+    BrickPoint target[] = bricks[brick][rotate];
+
+    // Add fill bricks
+    for(int i = 0 ; i < bricks[0][0].length ; i++){
+      if(target[i].isRender){
+        int fillX = (int)target[i].getX() + (int)currentBrickPosition.getX() + playGroundOffset;
+        int fillY = (int)target[i].getY() + (int)currentBrickPosition.getY() + playGroundOffset;
+        Point fillPoint = new Point(fillX, fillY);
+        fillBricks.add(fillPoint);
+      }
+    }
+
+    //// Clean line if it's possible
+    //for(int i = 0 ; i < fillBricks.size() ; i++){
+
+      //// Check is there are avaliable clear line
+      //int nowFillNum = 0;
+      //for(int j = 0 ; j < fillBricks.size() ; j++){
+        //if(fillBricks.get(i).getY() == fillBricks.get(j).getY()){
+          //nowFillNum++;
+        //}
+      //}
+    //}
+
+    currentBrickState.nextBrick();
+    currentBrickPosition.move(0, 0);
   }
 
 }
@@ -161,10 +202,10 @@ class BrickPoint extends Point{
 }
 
 class Operation extends KeyAdapter{
-  int offset;
+  int cubeSize;
 
-  public Operation(int offset){
-    this.offset = offset;
+  public Operation(int cubeSize){
+    this.cubeSize = cubeSize;
   }
 
   public void keyPressed(KeyEvent e){
@@ -186,7 +227,7 @@ class Operation extends KeyAdapter{
     }
 
     if(checkBound()){  // When out of bound return true
-      backWard(keyCode);
+      processBrick(keyCode);
     }
 
     Tetris.tetris.repaint();
@@ -197,15 +238,15 @@ class Operation extends KeyAdapter{
   }
 
   public void moveDown(){
-    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + this.offset);
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + this.cubeSize);
   }
 
   public void moveLeft(){
-    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() - this.offset, (int)Tetris.currentBrickPosition.getY());
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() - this.cubeSize, (int)Tetris.currentBrickPosition.getY());
   }
 
   public void moveRight(){
-    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.offset, (int)Tetris.currentBrickPosition.getY());
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.cubeSize, (int)Tetris.currentBrickPosition.getY());
   }
 
   public boolean checkBound(){
@@ -214,28 +255,45 @@ class Operation extends KeyAdapter{
     int rotate = Tetris.currentBrickState.getRotate();
     int currentX = (int)Tetris.currentBrickPosition.getX();
     int currentY = (int)Tetris.currentBrickPosition.getY();
-    int leftBound = 0 + this.offset;
+    int leftBound = 0 + Tetris.playGroundOffset;
     int rightBound = leftBound + Tetris.playGroundWidth;
-    int bottomBound = Tetris.playGroundHeight + this.offset;
+    int bottomBound = Tetris.playGroundHeight + Tetris.playGroundOffset;
     BrickPoint target[] = Tetris.bricks[brick][rotate];
+    ArrayList<Point> fillBricks = new ArrayList<Point>(Tetris.tetris.fillBricks);
 
     for(int i = 0 ; i < Tetris.bricks[0][0].length ; i++){
       if(target[i].isRender){
-        int checkX = (int)target[i].getX() + currentX + this.offset;
-        int checkY = (int)target[i].getY() + currentY + this.offset;
+        int nowFillX = (int)target[i].getX() + currentX + Tetris.playGroundOffset;
+        int nowFillY = (int)target[i].getY() + currentY + Tetris.playGroundOffset;
 
-        // Check left bound
-        if(checkX < leftBound){
+        // Check left and right bound
+        if(nowFillX < leftBound){
           result = true;
           break;
-        }else if(checkX >= rightBound){
+        }
+
+        if(nowFillX >= rightBound){
           result = true;
           break;
-        }else if(checkY >= bottomBound){
+        }
+
+        if(nowFillY >= bottomBound){
           result = true;
           break;
         }else{
-          continue;
+          if( !(fillBricks.isEmpty()) ){
+            for(int j = 0 ; j < fillBricks.size() ; j++){
+              int filledX = (int)fillBricks.get(j).getX();
+              int filledY = (int)fillBricks.get(j).getY();
+
+              if(nowFillY == filledY){
+                if(nowFillX == filledX){
+                  result = true;
+                  break;
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -243,19 +301,20 @@ class Operation extends KeyAdapter{
     return result;
   }
 
-  public void backWard(int lastAction){
+  public void processBrick(int lastAction){
     switch(lastAction){
       case KeyEvent.VK_UP:
         Tetris.currentBrickState.backRotate();
         break;
       case KeyEvent.VK_DOWN:
-        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() - this.offset);
+        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() - this.cubeSize);
+        Tetris.tetris.updateFillBricks();
         break;
       case KeyEvent.VK_LEFT:
-        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.offset, (int)Tetris.currentBrickPosition.getY());
+        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.cubeSize, (int)Tetris.currentBrickPosition.getY());
         break;
       case KeyEvent.VK_RIGHT:
-        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() - this.offset, (int)Tetris.currentBrickPosition.getY());
+        Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() - this.cubeSize, (int)Tetris.currentBrickPosition.getY());
         break;
     }
   }

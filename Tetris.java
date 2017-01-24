@@ -9,7 +9,7 @@ class Tetris extends Canvas{
   static int winX = 620;
   static int winY = 700;
   static int playGroundOffset = 15;
-  public ArrayList<Point> fillBricks = new ArrayList<Point>();
+  public ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>();
   public static int playGroundWidth = 400;
   public static int playGroundHeight = 640;
   public static Point currentBrickPosition = new Point(0, 0);
@@ -155,22 +155,50 @@ class Tetris extends Canvas{
       if(target[i].isRender){
         int fillX = (int)target[i].getX() + (int)currentBrickPosition.getX() + playGroundOffset;
         int fillY = (int)target[i].getY() + (int)currentBrickPosition.getY() + playGroundOffset;
-        Point fillPoint = new Point(fillX, fillY);
+        BrickPoint fillPoint = new BrickPoint(fillX, fillY, true);
         fillBricks.add(fillPoint);
       }
     }
 
-    //// Clean line if it's possible
-    //for(int i = 0 ; i < fillBricks.size() ; i++){
 
-      //// Check is there are avaliable clear line
-      //int nowFillNum = 0;
-      //for(int j = 0 ; j < fillBricks.size() ; j++){
-        //if(fillBricks.get(i).getY() == fillBricks.get(j).getY()){
-          //nowFillNum++;
-        //}
-      //}
-    //}
+    // Clean line if it's possible
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+
+      // Check is there are avaliable clear line
+      int nowFillNum = 0;
+      for(int j = 0 ; j < fillBricks.size() ; j++){
+        if(fillBricks.get(i).getY() == fillBricks.get(j).getY()){
+          nowFillNum++;
+        }
+      }
+
+      double targetY = fillBricks.get(i).getY();  // Find specify Y coordinate
+
+      if(nowFillNum == lineCubeNum){
+
+        // Mark specify Y coordinate filled line
+        for(int r = 0 ; r < fillBricks.size() ; r++){
+          if(fillBricks.get(r).getY() == targetY){
+            fillBricks.get(r).turnOff();
+          }
+
+          // Above specify Y's point will decline
+          if(fillBricks.get(r).getY() < targetY){
+            fillBricks.get(r).move((int)fillBricks.get(r).getX(), (int)fillBricks.get(r).getY() + cubeSize);
+          }
+        }
+      }
+    }
+
+    // Update fillBricks, remove the clean line
+    ArrayList<BrickPoint> updateFillBricks = new ArrayList<BrickPoint>();
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+      if(fillBricks.get(i).isRender){
+        updateFillBricks.add(fillBricks.get(i));
+      }
+    }
+
+    fillBricks = new ArrayList<BrickPoint>(updateFillBricks);
 
     currentBrickState.nextBrick();
     currentBrickPosition.move(0, 0);

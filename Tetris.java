@@ -48,6 +48,10 @@ class Tetris extends Canvas{
     drawPlayGround(g);
     renderCurrentBrick(g);
     renderFillBricks(g);
+    g.setColor(Color.black);
+    g.setFont(new Font("Arial", Font.PLAIN, 30));
+    g.drawString("Score", winX - 175, 150);
+    g.drawString(String.valueOf(score.getScore()), winX - 150, 200);
   }
 
   public void drawPlayGround(Graphics g){

@@ -5,38 +5,40 @@ import java.util.*;
 class Tetris extends Canvas{
   int borderRight = playGroundWidth - cubeSize;
   int borderBottom = playGroundHeight - cubeSize;
-  static int cubeSize = 40;
+  int lineCubeNum = playGroundWidth / cubeSize;
   static int winX = 660;
   static int winY = 700;
   static int playGroundOffset = 15;
+  public boolean gameFlag = true;
   public ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>();
+  public static int cubeSize = 40;
   public static int playGroundWidth = 400;
   public static int playGroundHeight = 640;
   public static Point currentBrickPosition = new Point(0, 0);
   public static BrickState currentBrickState = new BrickState(0, 0);
   public static Tetris tetris = new Tetris();
-  public static Operation operation = new Operation(cubeSize);
   public static BrickPoint bricks[][][] = new BrickPoint[7][4][16];
-  static int lineCubeNum = playGroundWidth / cubeSize;
   static Score score = new Score();
 
   public static void main(String args[]){
-    // Create frame and add event listener
+    // Create frame, button and add event listener
     Frame frame = new Frame("Tetris");
     frame.setSize(winX, winY);
+
+    tetris.addKeyListener(new BrickOperation());
+    tetris.addMouseListener(new MouseOperation());
     frame.addWindowListener(new Window());
-    tetris.addKeyListener(operation);
 
     // Create bricks
     tetris.createBricks();
 
-    // Create canvas object(main function won't execute when it's an instance)
+    // Create canvas and button object(main function won't execute when it's an instance)
     frame.add(tetris, BorderLayout.CENTER);
 
     // Timer decline currentBrick
     TimerTask timerTask = new TimerTask(){
       public void run(){
-        operation.processKeyInput(KeyEvent.VK_DOWN);
+        new Operation().processKeyInput(KeyEvent.VK_DOWN);
       }
     };
     new Timer().scheduleAtFixedRate(timerTask, 0, 800);
@@ -45,13 +47,33 @@ class Tetris extends Canvas{
   }
 
   public void paint(Graphics g){
+    if(gameFlag){
+      drawPlayGround(g);
+      renderCurrentBrick(g);
+      renderFillBricks(g);
+      showScore(g);
+    }else{
+      showGameOver(g);
+    }
+  }
+
+  public void showGameOver(Graphics g){
     drawPlayGround(g);
-    renderCurrentBrick(g);
-    renderFillBricks(g);
+    showScore(g);
+    showTipMessage(g);
+  }
+
+  public void showScore(Graphics g){
     g.setColor(Color.black);
     g.setFont(new Font("Arial", Font.PLAIN, 30));
     g.drawString("Score", winX - 175, 150);
     g.drawString(String.valueOf(score.getScore()), winX - 150, 200);
+  }
+
+  public void showTipMessage(Graphics g){
+    g.setColor(Color.black);
+    g.setFont(new Font("Arial", Font.PLAIN, 15));
+    g.drawString("點一下螢幕重新開始", winX - 195, 250);
   }
 
   public void drawPlayGround(Graphics g){
@@ -210,7 +232,7 @@ class Tetris extends Canvas{
     // Score add cleanLineNum
     score.addScore(cleanLineNum);
 
-    // Update fillBricks, remove the clean line
+    // Update fillBricks, remove clean line's brick
     ArrayList<BrickPoint> updateFillBricks = new ArrayList<BrickPoint>();
     for(int i = 0 ; i < fillBricks.size() ; i++){
       if(fillBricks.get(i).isRender){
@@ -221,6 +243,22 @@ class Tetris extends Canvas{
     fillBricks = new ArrayList<BrickPoint>(updateFillBricks);
 
     currentBrickState.nextBrick();
+    currentBrickPosition.move(0, 0);
+  }
+
+  public void cleanFillBricks(){
+    fillBricks = new ArrayList<BrickPoint>();
+  }
+
+  public void gameOver(){
+    gameFlag = false;
+    cleanFillBricks();
+  }
+
+  public void gameStart(){
+    gameFlag = true;
+    score = new Score();
+    currentBrickState = new BrickState(0, 0);
     currentBrickPosition.move(0, 0);
   }
 
@@ -249,11 +287,11 @@ class BrickPoint extends Point{
   }
 }
 
-class Operation extends KeyAdapter{
+class BrickOperation extends KeyAdapter{
   int cubeSize;
 
-  public Operation(int cubeSize){
-    this.cubeSize = cubeSize;
+  public BrickOperation(){
+    this.cubeSize = Tetris.cubeSize;
   }
 
   public void keyPressed(KeyEvent e){
@@ -279,6 +317,10 @@ class Operation extends KeyAdapter{
 
     if(checkBound()){  // When out of bound return true
       processBrick(keyCode);
+    }
+
+    if(checkGameOver()){
+      Tetris.tetris.gameOver();
     }
 
     Tetris.tetris.repaint();
@@ -310,7 +352,7 @@ class Operation extends KeyAdapter{
     int rightBound = leftBound + Tetris.playGroundWidth;
     int bottomBound = Tetris.playGroundHeight + Tetris.playGroundOffset;
     BrickPoint target[] = Tetris.bricks[brick][rotate];
-    ArrayList<Point> fillBricks = new ArrayList<Point>(Tetris.tetris.fillBricks);
+    ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>(Tetris.tetris.fillBricks);
 
     for(int i = 0 ; i < Tetris.bricks[0][0].length ; i++){
       if(target[i].isRender){
@@ -370,6 +412,33 @@ class Operation extends KeyAdapter{
         break;
     }
   }
+
+  public boolean checkGameOver(){
+    boolean result = false;
+    int brick = Tetris.currentBrickState.getBrick();
+    int rotate = Tetris.currentBrickState.getRotate();
+    BrickPoint target[] = Tetris.bricks[brick][rotate];
+    ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>(Tetris.tetris.fillBricks);
+
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+      BrickPoint fillBrick = fillBricks.get(i);
+
+      for(int j = 0 ; j < target.length ; j++){
+        if(target[j].isRender){
+          if(target[j].getX() + Tetris.playGroundOffset == fillBrick.getX()){
+            if(target[j].getY() + Tetris.playGroundOffset == fillBrick.getY()){
+              result = true;
+              break;
+            }
+          }
+        }
+      }
+
+    }
+
+    return result;
+
+  }
 }
 
 class BrickState extends Point{
@@ -411,5 +480,11 @@ class Score{
 
   public int getScore(){
     return this.score;
+  }
+}
+
+class MouseOperation extends MouseAdapter{
+  public void mouseClicked(MouseEvent e) {
+    Tetris.tetris.gameStart();
   }
 }

@@ -6,7 +6,7 @@ class Tetris extends Canvas{
   int borderRight = playGroundWidth - cubeSize;
   int borderBottom = playGroundHeight - cubeSize;
   static int cubeSize = 40;
-  static int winX = 620;
+  static int winX = 660;
   static int winY = 700;
   static int playGroundOffset = 15;
   public ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>();
@@ -18,9 +18,10 @@ class Tetris extends Canvas{
   public static Operation operation = new Operation(cubeSize);
   public static BrickPoint bricks[][][] = new BrickPoint[7][4][16];
   static int lineCubeNum = playGroundWidth / cubeSize;
+  static Score score = new Score();
 
   public static void main(String args[]){
-    // Create frame and add some event listener
+    // Create frame and add event listener
     Frame frame = new Frame("Tetris");
     frame.setSize(winX, winY);
     frame.addWindowListener(new Window());
@@ -31,6 +32,14 @@ class Tetris extends Canvas{
 
     // Create canvas object(main function won't execute when it's an instance)
     frame.add(tetris, BorderLayout.CENTER);
+
+    // Timer decline currentBrick
+    TimerTask timerTask = new TimerTask(){
+      public void run(){
+        operation.processKeyInput(KeyEvent.VK_DOWN);
+      }
+    };
+    new Timer().scheduleAtFixedRate(timerTask, 0, 800);
 
     frame.setVisible(true);
   }
@@ -162,33 +171,40 @@ class Tetris extends Canvas{
 
 
     // Clean line if it's possible
+    int cleanLineNum = 0;
+
     for(int i = 0 ; i < fillBricks.size() ; i++){
-
-      // Check is there are avaliable clear line
-      int nowFillNum = 0;
-      for(int j = 0 ; j < fillBricks.size() ; j++){
-        if(fillBricks.get(i).getY() == fillBricks.get(j).getY()){
-          nowFillNum++;
-        }
-      }
-
-      double targetY = fillBricks.get(i).getY();  // Find specify Y coordinate
-
-      if(nowFillNum == lineCubeNum){
-
-        // Mark specify Y coordinate filled line
-        for(int r = 0 ; r < fillBricks.size() ; r++){
-          if(fillBricks.get(r).getY() == targetY){
-            fillBricks.get(r).turnOff();
+      if(fillBricks.get(i).isRender){
+        // Check is there are avaliable clear line
+        int nowFillNum = 0;
+        for(int j = 0 ; j < fillBricks.size() ; j++){
+          if(fillBricks.get(i).getY() == fillBricks.get(j).getY()){
+            nowFillNum++;
           }
+        }
 
-          // Above specify Y's point will decline
-          if(fillBricks.get(r).getY() < targetY){
-            fillBricks.get(r).move((int)fillBricks.get(r).getX(), (int)fillBricks.get(r).getY() + cubeSize);
+        double targetY = fillBricks.get(i).getY();  // Find specify Y coordinate
+
+        if(nowFillNum % lineCubeNum == 0){
+          cleanLineNum++;
+
+          // Mark specify Y coordinate filled line
+          for(int r = 0 ; r < fillBricks.size() ; r++){
+            if(fillBricks.get(r).getY() == targetY){
+              fillBricks.get(r).turnOff();
+            }
+
+            // Above specify Y's point will decline
+            if(fillBricks.get(r).getY() < targetY){
+              fillBricks.get(r).move((int)fillBricks.get(r).getX(), (int)fillBricks.get(r).getY() + cubeSize);
+            }
           }
         }
       }
     }
+
+    // Score add cleanLineNum
+    score.addScore(cleanLineNum);
 
     // Update fillBricks, remove the clean line
     ArrayList<BrickPoint> updateFillBricks = new ArrayList<BrickPoint>();
@@ -238,7 +254,10 @@ class Operation extends KeyAdapter{
 
   public void keyPressed(KeyEvent e){
     int keyCode = e.getKeyCode();
+    processKeyInput(keyCode);
+  }
 
+  public void processKeyInput(int keyCode){
     switch(keyCode){
       case KeyEvent.VK_UP:
         rotate();
@@ -323,6 +342,7 @@ class Operation extends KeyAdapter{
             }
           }
         }
+
       }
     }
 
@@ -371,5 +391,21 @@ class BrickState extends Point{
 
   public void backRotate(){
     this.move(this.getBrick(), (this.getRotate() + 4 - 1) % 4);
+  }
+}
+
+class Score{
+  private int score;
+
+  public Score(){
+    this.score = 0;
+  }
+
+  public void addScore(int score){
+    this.score += score;
+  }
+
+  public int getScore(){
+    return this.score;
   }
 }

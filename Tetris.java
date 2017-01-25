@@ -36,12 +36,12 @@ class Tetris extends Canvas{
     frame.add(tetris, BorderLayout.CENTER);
 
     // Timer decline currentBrick
-    TimerTask timerTask = new TimerTask(){
-      public void run(){
-        new Operation().processKeyInput(KeyEvent.VK_DOWN);
-      }
-    };
-    new Timer().scheduleAtFixedRate(timerTask, 0, 500);
+    //TimerTask timerTask = new TimerTask(){
+      //public void run(){
+        //new Operation().processKeyInput(KeyEvent.VK_DOWN);
+      //}
+    //};
+    //new Timer().scheduleAtFixedRate(timerTask, 0, 500);
 
     frame.setVisible(true);
   }
@@ -389,7 +389,8 @@ class BrickOperation extends KeyAdapter{
       boolean checkFlag = false;
       for(int j = 0 ; j < topPoints.size() ; j++){
         double topPointX = topPoints.get(j).getX();
-        if(targetX == topPointX){
+        double topPointY = topPoints.get(j).getY();
+        if(targetX == topPointX && topPointY < bottomY){  // bottomY must always less than topPointY, or it will has bug
           checkFlag = true;
           break;
         }

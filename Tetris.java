@@ -41,7 +41,7 @@ class Tetris extends Canvas{
         //new Operation().processKeyInput(KeyEvent.VK_DOWN);
       //}
     //};
-    //new Timer().scheduleAtFixedRate(timerTask, 0, 800);
+    //new Timer().scheduleAtFixedRate(timerTask, 0, 500);
 
     frame.setVisible(true);
   }
@@ -59,6 +59,7 @@ class Tetris extends Canvas{
 
   public void showGameOver(Graphics g){
     drawPlayGround(g);
+    renderFillBricks(g);
     showScore(g);
     showTipMessage(g);
   }
@@ -73,7 +74,8 @@ class Tetris extends Canvas{
   public void showTipMessage(Graphics g){
     g.setColor(Color.black);
     g.setFont(new Font("Arial", Font.PLAIN, 15));
-    g.drawString("點一下螢幕重新開始", winX - 195, 250);
+    g.drawString("Game Over, 新方塊沒地方放惹", winX - 205, 250);
+    g.drawString("點一下螢幕重新開始", winX - 195, 290);
   }
 
   public void drawPlayGround(Graphics g){
@@ -252,14 +254,14 @@ class Tetris extends Canvas{
 
   public void gameOver(){
     gameFlag = false;
-    cleanFillBricks();
   }
 
   public void gameStart(){
-    gameFlag = true;
+    cleanFillBricks();
     score = new Score();
     currentBrickState = new BrickState(0, 0);
     currentBrickPosition.move(0, 0);
+    gameFlag = true;
   }
 
 }
@@ -346,7 +348,7 @@ class BrickOperation extends KeyAdapter{
   }
 
   public void moveToButtom(){
-    int targetDistence = 0;
+    int targetDistance = 0;
     int destinationY = Tetris.playGroundHeight;
     int brick = Tetris.currentBrickState.getBrick();
     int rotate = Tetris.currentBrickState.getRotate();
@@ -355,45 +357,101 @@ class BrickOperation extends KeyAdapter{
     BrickPoint target[] = Tetris.bricks[brick][rotate];
     ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>(Tetris.tetris.fillBricks);
 
-    // Find the current bottom Y and X
-    int targetX = 0;
-    int startY = 0;
+    // Find the each current X's bottom Y
+    ArrayList<Point> topPoints = new ArrayList<Point>();
     for(int i = 0 ; i < target.length ; i++){
       if(target[i].isRender){
-        double nowY = target[i].getY();
         double nowX = target[i].getX();
+        int bottomY = (int)target[i].getY();
+
         for(int j = 0 ; j < target.length ; j++){
-          if(target[j].isRender){
-            if(nowY < target[j].getY()){
-              startY = (int)target[j].getY();
-              targetX = (int)target[j].getX();
-            }else{
-              startY = (int)nowY;
-              targetX = (int)nowX;
+          if(target[j].isRender && target[j].getX() == nowX){
+            if(bottomY < target[j].getY()){
+              bottomY = (int)target[j].getY();
             }
           }
         }
-      }
-    }
 
-    targetX += currentX + Tetris.playGroundOffset;
-    startY += currentY;
-
-    // Find corresponding Y in fill bricks that match startX
-    for(int i = 0 ; i < fillBricks.size() ; i++){
-      int nowX = (int)fillBricks.get(i).getX();
-      int nowY = (int)fillBricks.get(i).getY();
-
-      if(nowX == targetX){
-        if(destinationY > nowY){
-          destinationY = nowY - Tetris.playGroundOffset;  // Current Point don't count playGroundOffset, so it has to cut it
+        Point topPoint = new Point((int)nowX + Tetris.playGroundOffset + currentX, bottomY + currentY);
+        if( !(topPoints.contains(topPoint)) ){
+          topPoints.add(topPoint);
         }
       }
     }
 
-    targetDistence = destinationY - startY - this.cubeSize;
+    // Find the each corresponding X with topPoints in fillBricks's top Y
+    ArrayList<Point> bottomPoints = new ArrayList<Point>();
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+      double targetX = fillBricks.get(i).getX();
+      double bottomY = fillBricks.get(i).getY();
 
-    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + targetDistence);
+      // Check now point's x is match one of topPoints
+      boolean checkFlag = false;
+      for(int j = 0 ; j < topPoints.size() ; j++){
+        double topPointX = topPoints.get(j).getX();
+        if(targetX == topPointX){
+          checkFlag = true;
+          break;
+        }
+      }
+
+      // Find the top Y with nowX
+      if(checkFlag){
+        for(int r = 0 ; r < fillBricks.size() ; r++){
+          double nowX = fillBricks.get(r).getX();
+          double nowY = fillBricks.get(r).getY();
+          if(nowX == targetX){
+            if(bottomY > nowY){
+              bottomY = nowY;
+            }
+          }
+        }
+
+        Point bottomPoint = new Point((int)targetX, (int)bottomY);
+        if( !(bottomPoints.contains(bottomPoint)) ){
+          bottomPoints.add(bottomPoint);
+        }
+      }
+    }
+
+    // Find all distance
+    int distance[] = new int[topPoints.size()];
+    for(int i = 0 ; i < topPoints.size() ; i++){
+      double topX = topPoints.get(i).getX();
+      double topY = topPoints.get(i).getY();
+      for(int j = 0 ; j < bottomPoints.size() ; j++){
+        double bottomX = bottomPoints.get(j).getX();
+        double bottomY = bottomPoints.get(j).getY();
+        if(topX == bottomX){
+          distance[i] = (int)bottomY - (int)topY - Tetris.playGroundOffset - this.cubeSize;
+        }
+      }
+    }
+
+    // If there's no brick beneath the current bricks, then use bottom topPoint and Tetris.playGroundHeight to count
+    for(int i = 0 ; i < topPoints.size() ; i++){
+      if(distance[i] == 0){
+        double bottomY = topPoints.get(0).getY();
+        for(int j = 0 ; j < topPoints.size() ; j++){
+          if(bottomY < topPoints.get(j).getY()){
+            bottomY = topPoints.get(j).getY();
+          }
+        }
+        distance[i] = Tetris.playGroundHeight - (int)bottomY - this.cubeSize;
+      }
+    }
+
+    // Find min distance, and that's the correct length
+    targetDistance = distance[0];
+    for(int i = 0 ; i < topPoints.size() ; i++){
+      int nowDistance = distance[i];
+      if(targetDistance > nowDistance){
+        targetDistance = nowDistance;
+      }
+    }
+
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + targetDistance);
+    this.processKeyInput(KeyEvent.VK_DOWN);
   }
 
   public boolean checkBound(){

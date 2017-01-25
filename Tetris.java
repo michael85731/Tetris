@@ -36,12 +36,12 @@ class Tetris extends Canvas{
     frame.add(tetris, BorderLayout.CENTER);
 
     // Timer decline currentBrick
-    TimerTask timerTask = new TimerTask(){
-      public void run(){
-        new Operation().processKeyInput(KeyEvent.VK_DOWN);
-      }
-    };
-    new Timer().scheduleAtFixedRate(timerTask, 0, 800);
+    //TimerTask timerTask = new TimerTask(){
+      //public void run(){
+        //new Operation().processKeyInput(KeyEvent.VK_DOWN);
+      //}
+    //};
+    //new Timer().scheduleAtFixedRate(timerTask, 0, 800);
 
     frame.setVisible(true);
   }
@@ -313,6 +313,9 @@ class BrickOperation extends KeyAdapter{
       case KeyEvent.VK_RIGHT:
         moveRight();
         break;
+      case KeyEvent.VK_SPACE:
+        moveToButtom();
+        break;
     }
 
     if(checkBound()){  // When out of bound return true
@@ -340,6 +343,57 @@ class BrickOperation extends KeyAdapter{
 
   public void moveRight(){
     Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX() + this.cubeSize, (int)Tetris.currentBrickPosition.getY());
+  }
+
+  public void moveToButtom(){
+    int targetDistence = 0;
+    int destinationY = Tetris.playGroundHeight;
+    int brick = Tetris.currentBrickState.getBrick();
+    int rotate = Tetris.currentBrickState.getRotate();
+    int currentX = (int)Tetris.currentBrickPosition.getX();
+    int currentY = (int)Tetris.currentBrickPosition.getY();
+    BrickPoint target[] = Tetris.bricks[brick][rotate];
+    ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>(Tetris.tetris.fillBricks);
+
+    // Find the current bottom Y and X
+    int targetX = 0;
+    int startY = 0;
+    for(int i = 0 ; i < target.length ; i++){
+      if(target[i].isRender){
+        double nowY = target[i].getY();
+        double nowX = target[i].getX();
+        for(int j = 0 ; j < target.length ; j++){
+          if(target[j].isRender){
+            if(nowY < target[j].getY()){
+              startY = (int)target[j].getY();
+              targetX = (int)target[j].getX();
+            }else{
+              startY = (int)nowY;
+              targetX = (int)nowX;
+            }
+          }
+        }
+      }
+    }
+
+    targetX += currentX + Tetris.playGroundOffset;
+    startY += currentY;
+
+    // Find corresponding Y in fill bricks that match startX
+    for(int i = 0 ; i < fillBricks.size() ; i++){
+      int nowX = (int)fillBricks.get(i).getX();
+      int nowY = (int)fillBricks.get(i).getY();
+
+      if(nowX == targetX){
+        if(destinationY > nowY){
+          destinationY = nowY - Tetris.playGroundOffset;  // Current Point don't count playGroundOffset, so it has to cut it
+        }
+      }
+    }
+
+    targetDistence = destinationY - startY - this.cubeSize;
+
+    Tetris.currentBrickPosition.move((int)Tetris.currentBrickPosition.getX(), (int)Tetris.currentBrickPosition.getY() + targetDistence);
   }
 
   public boolean checkBound(){

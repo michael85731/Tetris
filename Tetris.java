@@ -9,11 +9,11 @@ class Tetris extends Canvas{
   static int winX = 660;
   static int winY = 700;
   static int playGroundOffset = 15;
-  public boolean gameFlag = true;
   public ArrayList<BrickPoint> fillBricks = new ArrayList<BrickPoint>();
   public static int cubeSize = 40;
   public static int playGroundWidth = 400;
   public static int playGroundHeight = 640;
+  public static boolean gameFlag = true;
   public static Point currentBrickPosition = new Point(0, 0);
   public static BrickState currentBrickState = new BrickState(0, 0);
   public static Tetris tetris = new Tetris();
@@ -36,12 +36,17 @@ class Tetris extends Canvas{
     frame.add(tetris, BorderLayout.CENTER);
 
     // Timer decline currentBrick
+    Timer timer = new Timer();
     TimerTask timerTask = new TimerTask(){
       public void run(){
-        new Operation().processKeyInput(KeyEvent.VK_DOWN);
+        if(gameFlag){
+          new Operation().processKeyInput(KeyEvent.VK_DOWN);
+        }else{
+          timer.cancel();
+        }
       }
     };
-    new Timer().scheduleAtFixedRate(timerTask, 0, 500);
+    timer.scheduleAtFixedRate(timerTask, 0, 500);
 
     frame.setVisible(true);
   }
@@ -52,6 +57,7 @@ class Tetris extends Canvas{
       renderCurrentBrick(g);
       renderFillBricks(g);
       showScore(g);
+      showTipMessage(g);
     }else{
       showGameOver(g);
     }
@@ -62,6 +68,7 @@ class Tetris extends Canvas{
     renderFillBricks(g);
     showScore(g);
     showTipMessage(g);
+    showGameOverMessage(g);
   }
 
   public void showScore(Graphics g){
@@ -74,8 +81,13 @@ class Tetris extends Canvas{
   public void showTipMessage(Graphics g){
     g.setColor(Color.black);
     g.setFont(new Font("Arial", Font.PLAIN, 15));
-    g.drawString("Game Over, 新方塊沒地方放惹", winX - 205, 250);
-    g.drawString("點一下螢幕重新開始", winX - 195, 290);
+    g.drawString("點一下螢幕重新開始", winX - 200, 250);
+  }
+
+  public void showGameOverMessage(Graphics g){
+    g.setColor(Color.black);
+    g.setFont(new Font("Arial", Font.PLAIN, 15));
+    g.drawString("Game Over, 新方塊沒地方放惹", winX - 220, 290);
   }
 
   public void drawPlayGround(Graphics g){
@@ -390,7 +402,7 @@ class BrickOperation extends KeyAdapter{
       for(int j = 0 ; j < topPoints.size() ; j++){
         double topPointX = topPoints.get(j).getX();
         double topPointY = topPoints.get(j).getY();
-        if(targetX == topPointX && topPointY < bottomY){  // bottomY must always less than topPointY, or it will has bug
+        if(targetX == topPointX){
           checkFlag = true;
           break;
         }
@@ -401,7 +413,8 @@ class BrickOperation extends KeyAdapter{
         for(int r = 0 ; r < fillBricks.size() ; r++){
           double nowX = fillBricks.get(r).getX();
           double nowY = fillBricks.get(r).getY();
-          if(nowX == targetX){
+
+          if(nowX == targetX && currentY < nowY){  // Only use lower than ccurrentY's data
             if(bottomY > nowY){
               bottomY = nowY;
             }
@@ -599,5 +612,6 @@ class Score{
 class MouseOperation extends MouseAdapter{
   public void mouseClicked(MouseEvent e) {
     Tetris.tetris.gameStart();
+    new Operation().processKeyInput(KeyEvent.VK_DOWN);
   }
 }

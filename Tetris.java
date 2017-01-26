@@ -40,7 +40,7 @@ class Tetris extends Canvas{
     TimerTask timerTask = new TimerTask(){
       public void run(){
         if(gameFlag){
-          new Operation().processKeyInput(KeyEvent.VK_DOWN);
+          new BrickOperation().processKeyInput(KeyEvent.VK_DOWN);
         }else{
           timer.cancel();
         }
@@ -612,6 +612,6 @@ class Score{
 class MouseOperation extends MouseAdapter{
   public void mouseClicked(MouseEvent e) {
     Tetris.tetris.gameStart();
-    new Operation().processKeyInput(KeyEvent.VK_DOWN);
+    new BrickOperation().processKeyInput(KeyEvent.VK_DOWN);
   }
 }

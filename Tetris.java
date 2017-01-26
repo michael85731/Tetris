@@ -46,7 +46,7 @@ class Tetris extends Canvas{
         }
       }
     };
-    timer.scheduleAtFixedRate(timerTask, 0, 500);
+    timer.scheduleAtFixedRate(timerTask, 0, 600);
 
     frame.setVisible(true);
   }
